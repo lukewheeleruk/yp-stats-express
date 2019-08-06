@@ -13,6 +13,10 @@ app.use(express.static('public'))
 // console.log that your server is up and running
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
+app.get('/test', (req, res) => {
+  res.json({ working: true })
+})
+
 // create a POST route
 app.post('/generate', (req, res) => {
   const html = req.body.html;
@@ -296,6 +300,6 @@ app.post('/generate', (req, res) => {
   });
   //next, we need to upload the new file to Amazon S3 and display a link to view it.
 
-
-  res.send({ link: 'http://localhost:5000/stats.pdf' });
+  res.header("Access-Control-Allow-Origin", "*");
+  res.send({ link: 'https://yp-stats-express-netyorazox.now.sh/stats.pdf' });
 });
