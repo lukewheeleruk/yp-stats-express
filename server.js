@@ -301,5 +301,5 @@ app.post('/generate', (req, res) => {
   //next, we need to upload the new file to Amazon S3 and display a link to view it.
 
   res.header("Access-Control-Allow-Origin", "*");
-  res.send({ link: 'https://yp-stats-express-netyorazox.now.sh/stats.pdf' });
+  res.send({ link: __dirname + 'stats.pdf' });
 });
