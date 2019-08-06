@@ -24,6 +24,11 @@ app.post('/generate', (req, res) => {
   const page = cheerio.load(html);
   const statsTable = page(selector);
 
+  //get company name from page, removing junk from element at the same time
+  const h1 = page('h1').text();
+  const companyName = h1.split('').splice(28, h1.length).join('')
+  console.log('Company name is:' + companyName)
+
   //we will use this function later to format the content of the cells we get from the HTML (eg. removing )
   const formatData = cellText => {
     let cellTextAsArray = cellText.split('');
@@ -45,6 +50,8 @@ app.post('/generate', (req, res) => {
       return cellTextAsArray.join('');
     }
   }
+
+
   
   //filter through the cells, pulling only month cells, view cells, and conversion cells
   const filteredData = [];
@@ -65,18 +72,82 @@ app.post('/generate', (req, res) => {
   const newHTML = `
     <html>
       <head>
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600,700,800&display=swap" rel="stylesheet">
         <style>
           body {
-            font-family: 'Verdana';
+            font-family: 'Open Sans';
+          }
+          .wrapper {
+            width: 800px;
+            padding: 20px;
           }
           h1 {
-            color: red;
+            color: #222;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 0;
+            font-size: 28px;
+          }
+          h2 {
+            margin-top: 0;
+            margin-bottom: 40px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            font-size: 14px;
+          }
+          h4 {
+            font-weight: 400;
+            margin-top: 0;
+            margin-bottom: 10px;
+          }
+          h4 span {
+            font-weight: 700;
+          }
+          table {
+            border-collapse: collapse;
+            font-size: 12px;
+          }
+          
+          table, th, td {
+            border: 1px solid #ddd;
+          }
+          td, th {
+            padding: 5px;
+          }
+          .month {
+            text-align: left;
+            width: 300px;
+          }
+          th {
+            text-align: left;
+            color: white;
+            background-color: grey;
+          }
+          .total {
+            color: #ec008c;
+            font-weight: 700;
+          }
+          .views, .conversions {
+            width: 100px;
+            text-align: right;
+          }
+          img {
+            width: 80px;
           }
         </style>
       </head>
       <body>
-        <h1>Stats</h1>
+        <div class='wrapper'>
+        <h4><span>YACHTING</span>PAGES.COM Traffic Report</h4>
+        <h1>${companyName}</h1>
+        <h2>Web Showcase</h2>
         <table>
+          <tr>
+            <th>Month/Year</th>
+            <th>Views</th>
+            <th>Conversions</th>
+          </tr>
           <tr>
             <td class='month'>
               ${trimmedData[0]}
@@ -209,10 +280,13 @@ app.post('/generate', (req, res) => {
               ${trimmedData[35]}
             </td>
           </tr>
+          <tr>
+            <td class='month total'>Total</td>
+            <td class='views total'>${Number(trimmedData[34]) + Number(trimmedData[31]) + Number(trimmedData[28]) + Number(trimmedData[25]) + Number(trimmedData[22]) + Number(trimmedData[19]) + Number(trimmedData[16]) + Number(trimmedData[13]) + Number(trimmedData[10]) + Number(trimmedData[7]) + Number(trimmedData[4]) + Number(trimmedData[1])}</td>
+            <td class='conversions total'>${Number(trimmedData[35]) + Number(trimmedData[32]) + Number(trimmedData[29]) + Number(trimmedData[26]) + Number(trimmedData[23]) + Number(trimmedData[20]) + Number(trimmedData[17]) + Number(trimmedData[14]) + Number(trimmedData[11]) + Number(trimmedData[8]) + Number(trimmedData[5]) + Number(trimmedData[2])}</td>
+          </tr>
         </table>
-        <h2></h2>
-        <h2></h2>
-        <h2></h2>
+        </div>
       </body>
     </html>
   `
@@ -221,9 +295,8 @@ app.post('/generate', (req, res) => {
     if (err) return console.log(err);
     console.log(res); // { filename: '/app/businesscard.pdf' }
   });
-
   //next, we need to upload the new file to Amazon S3 and display a link to view it.
 
 
-  res.send({ link: 'localhost:5000/stats.pdf' });
+  res.send({ link: 'http://localhost:5000/stats.pdf' });
 });
