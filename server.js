@@ -7,8 +7,8 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 AWS.config.update({
-  accessKeyId: process.env.ACCESS_KEY || "AKIAWDELZEOU6IBBB6VD",
-  secretAccessKey: process.env.SECRET_ACCESS_KEY || "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"
+  accessKeyId: process.env.ACCESS_KEY,
+  secretAccessKey: process.env.SECRET_ACCESS_KEY
 });
 
 const s3 = new AWS.S3();
