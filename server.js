@@ -1,9 +1,17 @@
 const express = require('express');
-const bodyParser = require('body-parser')
+const AWS = require('aws-sdk');
+const bodyParser = require('body-parser');
 const cheerio = require('cheerio');
 const pdf = require('html-pdf');
 const app = express();
 const port = process.env.PORT || 5000;
+
+AWS.config.update({
+  accessKeyId: process.env.ACCESS_KEY || "AKIAWDELZEOU6IBBB6VD",
+  secretAccessKey: process.env.SECRET_ACCESS_KEY || "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"
+});
+
+const s3 = new AWS.S3();
 
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
@@ -293,13 +301,30 @@ app.post('/generate', (req, res) => {
       </body>
     </html>
   `
-
-  pdf.create(newHTML, { format: 'Letter' }).toFile('public/stats.pdf', function(err, res) {
-    if (err) return console.log(err);
-    console.log(res); // { filename: '/app/businesscard.pdf' }
+  const filename = Date.now()
+  pdf.create(newHTML, { format: 'Letter' }).toBuffer(function(err, buffer) {
+    if (err) {
+      return console.log(err);
+    }
+    else {
+        
+        const params = {
+            Bucket : 'yp-stats-generated-reports',
+            Key : filename + '.pdf',
+            Body : buffer
+        }
+        s3.putObject(params, (err, data) => {
+          if (err) {
+              console.log("There was an error while saving the PDF to S3");
+              console.log(err);
+              var error = new Error("There was an error while saving the PDF to S3");
+              callback(error);
+          } else {
+              console.log('Created PDF with data:');
+              console.log(data);
+              res.send({ link: 'https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/' + filename + '.pdf' });
+          }
+        })
+    }
   });
-  //next, we need to upload the new file to Amazon S3 and display a link to view it.
-
-  res.header("Access-Control-Allow-Origin", "*");
-  res.send({ link: __dirname + 'stats.pdf' });
 });
