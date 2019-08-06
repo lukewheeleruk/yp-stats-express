@@ -27,7 +27,6 @@ app.post('/generate', (req, res) => {
   //get company name from page, removing junk from element at the same time
   const h1 = page('h1').text();
   const companyName = h1.split('').splice(28, h1.length).join('')
-  console.log('Company name is:' + companyName)
 
   //we will use this function later to format the content of the cells we get from the HTML (eg. removing )
   const formatData = cellText => {
@@ -145,8 +144,8 @@ app.post('/generate', (req, res) => {
         <table>
           <tr>
             <th>Month/Year</th>
-            <th>Views</th>
-            <th>Conversions</th>
+            <th class='views'>Views</th>
+            <th class='conversions'>Conversions</th>
           </tr>
           <tr>
             <td class='month'>
