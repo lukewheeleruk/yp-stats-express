@@ -7,8 +7,8 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 AWS.config.update({
-  accessKeyId: process.env.ACCESS_KEY,
-  secretAccessKey: process.env.SECRET_ACCESS_KEY
+  accessKeyId: process.env.ACCESS_KEY || 'AKIAWDELZEOUVU7NKIMZ',
+  secretAccessKey: process.env.SECRET_ACCESS_KEY || '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'
 });
 
 const s3 = new AWS.S3();
@@ -30,9 +30,18 @@ app.get('/test', (req, res) => {
   res.json({ working: true })
 })
 
+//set a count
+let uploadCount = 0;
+
+//route for getting upload count to front end
+app.get('/uploadcount', (req, res) => {
+  res.send({ uploadCount: uploadCount })
+})
+
 // create a POST route
 app.post('/generate', (req, res) => {
   const html = req.body.html;
+  const logoUrl = req.body.logoUrl;
 
   //will select all table cells from HTML
   const selector = 'table > tbody > .dataTR > td';
@@ -84,17 +93,21 @@ app.post('/generate', (req, res) => {
   for (i = filteredData.length - 36; i < filteredData.length; i++) {
     trimmedData.push(filteredData[i])
   }
+
+  const totalViews = Number(trimmedData[34]) + Number(trimmedData[31]) + Number(trimmedData[28]) + Number(trimmedData[25]) + Number(trimmedData[22]) + Number(trimmedData[19]) + Number(trimmedData[16]) + Number(trimmedData[13]) + Number(trimmedData[10]) + Number(trimmedData[7]) + Number(trimmedData[4]) + Number(trimmedData[1])
+  const totalConversions = Number(trimmedData[35]) + Number(trimmedData[32]) + Number(trimmedData[29]) + Number(trimmedData[26]) + Number(trimmedData[23]) + Number(trimmedData[20]) + Number(trimmedData[17]) + Number(trimmedData[14]) + Number(trimmedData[11]) + Number(trimmedData[8]) + Number(trimmedData[5]) + Number(trimmedData[2])
+  const conversionRate = (totalConversions / totalViews * 100).toFixed(2) + "%"
   
   const newHTML = `
     <html>
       <head>
-        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600,700,800&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800&display=swap" rel="stylesheet">
         <style>
           body {
             font-family: 'Open Sans';
           }
           .wrapper {
-            width: 800px;
+            width: 554px;
             padding: 20px;
           }
           h1 {
@@ -102,7 +115,7 @@ app.post('/generate', (req, res) => {
             font-weight: 700;
             margin-top: 0;
             margin-bottom: 0;
-            font-size: 28px;
+            font-size: 22px;
           }
           h2 {
             margin-top: 0;
@@ -110,61 +123,107 @@ app.post('/generate', (req, res) => {
             font-weight: 600;
             color: #666;
             text-transform: uppercase;
-            font-size: 14px;
+            font-size: 12px;
           }
           h4 {
             font-weight: 400;
+            font-size: 12px;
             margin-top: 0;
             margin-bottom: 10px;
           }
-          h4 span {
-            font-weight: 700;
+          .fat {
+            font-weight: 800;
+          }
+          .pink {
+            color: #ec008c;
+            font-size: 20px;
+            font-weight: 300;
+            text-transform: uppercase;
           }
           table {
             border-collapse: collapse;
             font-size: 12px;
+            border: 1px solid #eee;
           }
-          
-          table, th, td {
-            border: 1px solid #ddd;
-          }
+        
           td, th {
             padding: 5px;
           }
           .month {
             text-align: left;
-            width: 300px;
+            width: 200px;
           }
           th {
             text-align: left;
-            color: white;
-            background-color: grey;
+            background-color: #eee;
+            border: none;
           }
           .total {
-            color: #ec008c;
             font-weight: 700;
           }
           .views, .conversions {
             width: 100px;
             text-align: right;
           }
-          img {
-            width: 80px;
+          .r1, .r3, .r5, .r7, .r9, .r11, .r13 {
+            background-color: #fbfbfb;
+          }
+          .r2, .r4, .r6, .r8, .r10, .r12, .r14 {
+            background-color: #f5f5f5;
+          }
+          .header {
+            margin-bottom: 140px;
+          }
+          .header .text {
+            width: 400px;
+            float: left;
+          }
+          .header .logo {
+            float: right;
+          }
+          .header img {
+            width: 150px;
+          }
+          .clear {
+            clear: both;
+          }
+          footer {
+            position: absolute;
+            bottom: 0;
+            margin-bottom: 20px;
+          }
+          footer img {
+            width: 100px;
+          }
+          footer p {
+            position: absolute;
+            bottom: 0;
+            font-size: 10px;
+            left: 120px;
+            width: 600px;
           }
         </style>
       </head>
       <body>
         <div class='wrapper'>
-        <h4><span>YACHTING</span>PAGES.COM Traffic Report</h4>
-        <h1>${companyName}</h1>
-        <h2>Web Showcase</h2>
+        <div class='header'>
+          <div class='text'>
+            <h4><span class='fat'>YACHTING</span>PAGES.COM <br /><span class='pink'>Traffic Report</span></h4>
+            <h1>${companyName}</h1>
+            <h2>Web Showcase</h2>
+          </div>
+          <div class='logo'>
+            <img src=${logoUrl}/>
+          </div>
+        </div>
+        <div class='clear'></div>
         <table>
-          <tr>
+          <tr class='hr'>
             <th>Month/Year</th>
             <th class='views'>Views</th>
             <th class='conversions'>Conversions</th>
           </tr>
-          <tr>
+          <tr class='r1'>
             <td class='month'>
               ${trimmedData[0]}
             </td>
@@ -175,7 +234,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[2]}
             </td>
           </tr>
-          <tr>
+          <tr class='r2'>
             <td class='month'>
               ${trimmedData[3]}
             </td>
@@ -186,7 +245,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[5]}
             </td>
           </tr>
-          <tr>
+          <tr class='r3'>
             <td class='month'>
               ${trimmedData[6]}
             </td>
@@ -197,7 +256,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[8]}
             </td>
           </tr>
-          <tr>
+          <tr class='r4'>
             <td class='month'>
               ${trimmedData[9]}
             </td>
@@ -208,7 +267,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[11]}
             </td>
           </tr>
-          <tr>
+          <tr class='r5'>
             <td class='month'>
               ${trimmedData[12]}
             </td>
@@ -219,7 +278,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[14]}
             </td>
           </tr>
-          <tr>
+          <tr class='r6'>
             <td class='month'>
               ${trimmedData[15]}
             </td>
@@ -230,7 +289,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[17]}
             </td>
           </tr>
-          <tr>
+          <tr class='r7'>
             <td class='month'>
               ${trimmedData[18]}
             </td>
@@ -241,7 +300,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[20]}
             </td>
           </tr>
-          <tr>
+          <tr class='r8'>
             <td class='month'>
               ${trimmedData[21]}
             </td>
@@ -252,7 +311,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[23]}
             </td>
           </tr>
-          <tr>
+          <tr class='r9'>
             <td class='month'>
               ${trimmedData[24]}
             </td>
@@ -263,7 +322,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[26]}
             </td>
           </tr>
-          <tr>
+          <tr class='r10'>
             <td class='month'>
               ${trimmedData[27]}
             </td>
@@ -274,7 +333,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[29]}
             </td>
           </tr>
-          <tr>
+          <tr class='r11'>
             <td class='month'>
               ${trimmedData[30]}
             </td>
@@ -285,7 +344,7 @@ app.post('/generate', (req, res) => {
               ${trimmedData[32]}
             </td>
           </tr>
-          <tr>
+          <tr class='r12'>
             <td class='month'>
               ${trimmedData[33]}
             </td>
@@ -296,13 +355,22 @@ app.post('/generate', (req, res) => {
               ${trimmedData[35]}
             </td>
           </tr>
-          <tr>
+          <tr class='r13'>
             <td class='month total'>Total</td>
-            <td class='views total'>${Number(trimmedData[34]) + Number(trimmedData[31]) + Number(trimmedData[28]) + Number(trimmedData[25]) + Number(trimmedData[22]) + Number(trimmedData[19]) + Number(trimmedData[16]) + Number(trimmedData[13]) + Number(trimmedData[10]) + Number(trimmedData[7]) + Number(trimmedData[4]) + Number(trimmedData[1])}</td>
-            <td class='conversions total'>${Number(trimmedData[35]) + Number(trimmedData[32]) + Number(trimmedData[29]) + Number(trimmedData[26]) + Number(trimmedData[23]) + Number(trimmedData[20]) + Number(trimmedData[17]) + Number(trimmedData[14]) + Number(trimmedData[11]) + Number(trimmedData[8]) + Number(trimmedData[5]) + Number(trimmedData[2])}</td>
+            <td class='views total'>${totalViews}</td>
+            <td class='conversions total'>${totalConversions}</td>
+          </tr>
+          <tr class='r14'>
+            <td class='month total'>Conversion rate</td>
+            <td colspan='2' class='views total'>${conversionRate}</td>       
           </tr>
         </table>
+        <footer>
+          <img src='https://www.yachting-pages.com/theme/companies/yp/images/yachting-pages-superyacht-directory.gif' />
+          <p>WWW.YACHTINGPAGES.COM<br />515-517 Stockwood Road, Bristol, BS4 5LR, UK<br />UK: +44 (0)11 73 16 05 60 FR:+33(0)489733282<br />ITA:+390662291716 USA:+19546363462</p>
+        </footer>
         </div>
+        
       </body>
     </html>
   `
@@ -318,18 +386,24 @@ app.post('/generate', (req, res) => {
             Key : filename + '.pdf',
             Body : buffer
         }
-        s3.putObject(params, (err, data) => {
-          if (err) {
-              console.log("There was an error while saving the PDF to S3");
-              console.log(err);
-              var error = new Error("There was an error while saving the PDF to S3");
-              callback(error);
-          } else {
-              console.log('Created PDF with data:');
-              console.log(data);
-              res.send({ link: 'https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/' + filename + '.pdf' });
-          }
-        })
+        if (uploadCount < 100) {
+          s3.putObject(params, (err, data) => {
+            if (err) {
+                console.log("There was an error while saving the PDF to S3");
+                console.log(err);
+                var error = new Error("There was an error while saving the PDF to S3");
+                callback(error);
+            } else {
+                console.log('Created PDF with data:');
+                console.log(data);
+                uploadCount++
+                console.log('Upload count: ' + uploadCount)
+                res.send({ link: 'https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/' + filename + '.pdf' });
+            }
+          })
+        } else {
+          console.log('Internal quota exceeded.')
+        }
     }
   });
 });
