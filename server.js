@@ -17,7 +17,7 @@ app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('public'));
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
@@ -38,10 +38,9 @@ app.get('/uploadcount', (req, res) => {
   res.send({ uploadCount: uploadCount })
 })
 
-// create a POST route
+// create a POST route for generation
 app.post('/generate', (req, res) => {
-  const html = req.body.html;
-  const logoUrl = req.body.logoUrl;
+  const { html, logoUrl, level } = req.body
 
   //will select all table cells from HTML
   const selector = 'table > tbody > .dataTR > td';
@@ -54,13 +53,13 @@ app.post('/generate', (req, res) => {
   const h1 = page('h1').text();
   const companyName = h1.split('').splice(28, h1.length).join('')
 
-  //we will use this function later to format the content of the cells we get from the HTML (eg. removing )
+  //we will use this function later to format the content of the cells we get from the HTML
   const formatData = cellText => {
     let cellTextAsArray = cellText.split('');
     if (!isNaN(cellText[0])) {
       //VALUE CELL
       cellTextAsArray.forEach((char, i) => {
-        if(char === ' '){
+        if (char === ' ') {
           cellTextAsArray.splice(i, cellTextAsArray.length - i)
         }
       })
@@ -68,36 +67,35 @@ app.post('/generate', (req, res) => {
     } else {
       //MONTH CELL
       cellTextAsArray.forEach((char, i) => {
-        if(char === '/'){
-          cellTextAsArray.splice(i,2)
+        if (char === '/') {
+          cellTextAsArray.splice(i, 2)
         }
       })
       return cellTextAsArray.join('');
     }
   }
 
-
-  
   //filter through the cells, pulling only month cells, view cells, and conversion cells
   const filteredData = [];
   let groupCounter = 0;
-  statsTable.each(function(i, e){   
+  statsTable.each(function (i, e) {
     if (groupCounter === 0 || groupCounter === 2 || groupCounter === 3) {
       filteredData.push(formatData(page(e).text()))
     }
-    if (groupCounter < 6) {groupCounter++} else {groupCounter = 0}
+    if (groupCounter < 6) { groupCounter++ } else { groupCounter = 0 }
   });
-  
+
   //trim data to last 12 months, so the last 36 elements of the array.
   const trimmedData = [];
   for (i = filteredData.length - 36; i < filteredData.length; i++) {
     trimmedData.push(filteredData[i])
   }
 
+  // really lazy maths
   const totalViews = Number(trimmedData[34]) + Number(trimmedData[31]) + Number(trimmedData[28]) + Number(trimmedData[25]) + Number(trimmedData[22]) + Number(trimmedData[19]) + Number(trimmedData[16]) + Number(trimmedData[13]) + Number(trimmedData[10]) + Number(trimmedData[7]) + Number(trimmedData[4]) + Number(trimmedData[1])
   const totalConversions = Number(trimmedData[35]) + Number(trimmedData[32]) + Number(trimmedData[29]) + Number(trimmedData[26]) + Number(trimmedData[23]) + Number(trimmedData[20]) + Number(trimmedData[17]) + Number(trimmedData[14]) + Number(trimmedData[11]) + Number(trimmedData[8]) + Number(trimmedData[5]) + Number(trimmedData[2])
   const conversionRate = (totalConversions / totalViews * 100).toFixed(2) + "%"
-  
+
   const newHTML = `
     <html>
       <head>
@@ -114,20 +112,24 @@ app.post('/generate', (req, res) => {
             color: #222;
             font-weight: 700;
             margin-top: 0;
-            margin-bottom: 0;
+            margin-bottom: 2px;
             font-size: 22px;
           }
           h2 {
             margin-top: 0;
             margin-bottom: 40px;
-            font-weight: 600;
-            color: #666;
+            font-weight: 700;
+            color: #888;
             text-transform: uppercase;
             font-size: 12px;
           }
+          h2 span {
+            font-weight: 400;
+            padding-left: 10px;
+          }
           h4 {
             font-weight: 400;
-            font-size: 12px;
+            font-size: 10px;
             margin-top: 0;
             margin-bottom: 10px;
           }
@@ -136,8 +138,8 @@ app.post('/generate', (req, res) => {
           }
           .pink {
             color: #ec008c;
-            font-size: 20px;
-            font-weight: 300;
+            font-size: 12px;
+            font-weight: 400;
             text-transform: uppercase;
           }
           table {
@@ -197,7 +199,7 @@ app.post('/generate', (req, res) => {
           }
           footer p {
             position: absolute;
-            bottom: 0;
+            bottom: -8px;
             font-size: 10px;
             left: 120px;
             width: 600px;
@@ -210,7 +212,8 @@ app.post('/generate', (req, res) => {
           <div class='text'>
             <h4><span class='fat'>YACHTING</span>PAGES.COM <br /><span class='pink'>Traffic Report</span></h4>
             <h1>${companyName}</h1>
-            <h2>Web Showcase</h2>
+            <h2>${level == 1 ? 'Web Showcase' : 'Web Mini Showcase'} <span>${trimmedData[0]} - ${trimmedData[33]}<span></h2>
+            <h4></h4>
           </div>
           <div class='logo'>
             <img src=${logoUrl}/>
@@ -219,7 +222,7 @@ app.post('/generate', (req, res) => {
         <div class='clear'></div>
         <table>
           <tr class='hr'>
-            <th>Month/Year</th>
+            <th>Date</th>
             <th class='views'>Views</th>
             <th class='conversions'>Conversions</th>
           </tr>
@@ -367,7 +370,7 @@ app.post('/generate', (req, res) => {
         </table>
         <footer>
           <img src='https://www.yachting-pages.com/theme/companies/yp/images/yachting-pages-superyacht-directory.gif' />
-          <p>WWW.YACHTINGPAGES.COM<br />515-517 Stockwood Road, Bristol, BS4 5LR, UK<br />UK: +44 (0)11 73 16 05 60 FR:+33(0)489733282<br />ITA:+390662291716 USA:+19546363462</p>
+          <p><b>YACHTINGPAGES.COM</b><br />info@yachtingpages.com<br />470 Bath Road, Bristol, BS4 3AP, UK</p>
         </footer>
         </div>
         
@@ -375,35 +378,33 @@ app.post('/generate', (req, res) => {
     </html>
   `
   const filename = Date.now()
-  pdf.create(newHTML, { format: 'Letter' }).toBuffer(function(err, buffer) {
+  pdf.create(newHTML, { format: 'Letter' }).toBuffer(function (err, buffer) {
     if (err) {
       return console.log(err);
     }
-    else {
-        
+    //upload to s3
+    else if (uploadCount < 300) {
         const params = {
-            Bucket : 'yp-stats-generated-reports',
-            Key : filename + '.pdf',
-            Body : buffer
+          Bucket: 'yp-stats-generated-reports',
+          Key: filename + '.pdf',
+          Body: buffer
         }
-        if (uploadCount < 100) {
-          s3.putObject(params, (err, data) => {
-            if (err) {
-                console.log("There was an error while saving the PDF to S3");
-                console.log(err);
-                var error = new Error("There was an error while saving the PDF to S3");
-                callback(error);
-            } else {
-                console.log('Created PDF with data:');
-                console.log(data);
-                uploadCount++
-                console.log('Upload count: ' + uploadCount)
-                res.send({ link: 'https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/' + filename + '.pdf' });
-            }
-          })
-        } else {
-          console.log('Internal quota exceeded.')
-        }
-    }
+        s3.putObject(params, (err, data) => {
+          if (err) {
+            console.log("There was an error while saving the PDF to S3");
+            console.log(err);
+            var error = new Error("There was an error while saving the PDF to S3");
+            callback(error);
+          } else {
+            console.log('Created PDF with data:');
+            console.log(data);
+            uploadCount++
+            console.log('Upload count: ' + uploadCount)
+            res.send({ link: 'https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/' + filename + '.pdf' });
+          }
+        })
+      } else {
+        console.log('Internal quota exceeded.')
+      }
   });
 });
