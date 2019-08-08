@@ -105,7 +105,7 @@ app.post('/generate', (req, res) => {
             font-family: 'Open Sans';
           }
           .wrapper {
-            width: 554px;
+            width: 538px;
             padding: 20px;
           }
           h1 {
@@ -143,13 +143,13 @@ app.post('/generate', (req, res) => {
             text-transform: uppercase;
           }
           table {
-            border-collapse: collapse;
             font-size: 12px;
+            border-collapse: collapse;
             border: 1px solid #eee;
           }
         
           td, th {
-            padding: 5px;
+            padding: 5px 10px;
           }
           .month {
             text-align: left;
@@ -157,11 +157,18 @@ app.post('/generate', (req, res) => {
           }
           th {
             text-align: left;
-            background-color: #eee;
+            background-color: #ec008c;
+            text-transform: uppercase;
+            color: white;
             border: none;
+          }
+          tr {
+            border: 1px solid #eee;
           }
           .total {
             font-weight: 700;
+            text-transform: uppercase;
+            color: #ec008c;
           }
           .views, .conversions {
             width: 100px;
@@ -177,7 +184,7 @@ app.post('/generate', (req, res) => {
             margin-bottom: 140px;
           }
           .header .text {
-            width: 400px;
+            width: 380px;
             float: left;
           }
           .header .logo {
@@ -377,8 +384,9 @@ app.post('/generate', (req, res) => {
       </body>
     </html>
   `
+
   const filename = Date.now()
-  pdf.create(newHTML, { format: 'Letter' }).toBuffer(function (err, buffer) {
+  pdf.create(newHTML, { format: 'A4' }).toBuffer(function (err, buffer) {
     if (err) {
       return console.log(err);
     }
@@ -396,8 +404,6 @@ app.post('/generate', (req, res) => {
             var error = new Error("There was an error while saving the PDF to S3");
             callback(error);
           } else {
-            console.log('Created PDF with data:');
-            console.log(data);
             uploadCount++
             console.log('Upload count: ' + uploadCount)
             res.send({ link: 'https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/' + filename + '.pdf' });
