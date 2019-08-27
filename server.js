@@ -87,7 +87,7 @@ app.post('/generate', (req, res) => {
 
   //trim data to last 12 months, so the last 36 elements of the array.
   const trimmedData = [];
-  for (i = filteredData.length - 36; i < filteredData.length; i++) {
+  for (let i = filteredData.length - 36; i < filteredData.length; i++) {
     trimmedData.push(filteredData[i])
   }
 
