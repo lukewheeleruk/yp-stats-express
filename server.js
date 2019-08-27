@@ -26,10 +26,6 @@ app.use(function (req, res, next) {
 // console.log that your server is up and running
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
-app.get('/test', (req, res) => {
-  res.json({ working: true })
-})
-
 //set a count
 let uploadCount = 0;
 
