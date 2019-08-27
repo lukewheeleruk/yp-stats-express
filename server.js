@@ -7,8 +7,8 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 AWS.config.update({
-  accessKeyId: process.env.ACCESS_KEY || 'AKIAWDELZEOUVU7NKIMZ',
-  secretAccessKey: process.env.SECRET_ACCESS_KEY || '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'
+  accessKeyId: process.env.ACCESS_KEY,
+  secretAccessKey: process.env.SECRET_ACCESS_KEY
 });
 
 const s3 = new AWS.S3();
@@ -25,14 +25,6 @@ app.use(function (req, res, next) {
 
 // console.log that your server is up and running
 app.listen(port, () => console.log(`Listening on port ${port}`));
-
-//set a count
-let uploadCount = 0;
-
-//route for getting upload count to front end
-app.get('/uploadcount', (req, res) => {
-  res.send({ uploadCount: uploadCount })
-})
 
 // create a POST route for generation
 app.post('/generate', (req, res) => {
@@ -387,7 +379,7 @@ app.post('/generate', (req, res) => {
       return console.log(err);
     }
     //upload to s3
-    else if (uploadCount < 300) {
+
         const params = {
           Bucket: 'yp-stats-generated-reports',
           Key: filename + '.pdf',
@@ -400,13 +392,10 @@ app.post('/generate', (req, res) => {
             var error = new Error("There was an error while saving the PDF to S3");
             callback(error);
           } else {
-            uploadCount++
-            console.log('Upload count: ' + uploadCount)
+            console.log('PDF generated')
             res.send({ link: 'https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/' + filename + '.pdf' });
           }
         })
-      } else {
-        console.log('Internal quota exceeded.')
-      }
+
   });
 });
