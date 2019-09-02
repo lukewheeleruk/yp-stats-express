@@ -39,7 +39,7 @@ app.post('/generate', (req, res) => {
 
   //get company name from page, removing junk from element at the same time
   const h1 = page('h1').text();
-  const companyName = h1.split('').splice(28, h1.length).join('')
+  const companyName = h1.split('').splice(h1[0] === 'P' ? 22 : 28, h1.length).join('')
 
   //we will use this function later to format the content of the cells we get from the HTML
   const formatData = cellText => {
