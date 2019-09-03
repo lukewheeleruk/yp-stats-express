@@ -86,6 +86,21 @@ app.post('/generate', (req, res) => {
     trimmedData.push(filteredData[i])
   }
 
+  //function to return product name based on level, called in PDF HTML below
+  const getProductName = level => {
+    switch (level) {
+      case 1:
+        return 'Showcase'
+        break;
+      case 2:
+        return 'Mini Showcase'
+        break;
+      case 3:
+        return 'Featured Listing'
+        break;
+    }
+  }
+
   // really lazy maths
   const totalViews = Number(trimmedData[34]) + Number(trimmedData[31]) + Number(trimmedData[28]) + Number(trimmedData[25]) + Number(trimmedData[22]) + Number(trimmedData[19]) + Number(trimmedData[16]) + Number(trimmedData[13]) + Number(trimmedData[10]) + Number(trimmedData[7]) + Number(trimmedData[4]) + Number(trimmedData[1])
   const totalConversions = Number(trimmedData[35]) + Number(trimmedData[32]) + Number(trimmedData[29]) + Number(trimmedData[26]) + Number(trimmedData[23]) + Number(trimmedData[20]) + Number(trimmedData[17]) + Number(trimmedData[14]) + Number(trimmedData[11]) + Number(trimmedData[8]) + Number(trimmedData[5]) + Number(trimmedData[2])
@@ -214,7 +229,7 @@ app.post('/generate', (req, res) => {
           <div class='text'>
             <h4><span class='fat'>YACHTING</span>PAGES.COM <br /><span class='pink'>Traffic Report</span></h4>
             <h1>${companyName}</h1>
-            <h2>${level == 1 ? 'Web Showcase' : 'Web Mini Showcase'} <span>${trimmedData[0]} - ${trimmedData[33]}<span></h2>
+            <h2>${getProductName(level)} <span>${trimmedData[0]} - ${trimmedData[33]}<span></h2>
             <h4></h4>
           </div>
           <div class='logo'>
