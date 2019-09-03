@@ -70,6 +70,13 @@ app.post('/generate', (req, res) => {
     if (groupCounter === 0 || groupCounter === 2 || groupCounter === 3) {
       filteredData.push(formatData(page(e).text()))
     }
+    // add email conversions amount to previous conversions cell pushed to array
+    if (groupCounter === 4) {
+      const emailConvs = Number(formatData(page(e).text()))
+      const websiteConvs = Number(filteredData.pop())
+      const totalConvs = emailConvs + websiteConvs
+      filteredData.push(totalConvs)
+    }
     if (groupCounter < 6) { groupCounter++ } else { groupCounter = 0 }
   });
 
