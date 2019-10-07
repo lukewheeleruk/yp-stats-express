@@ -1,10 +1,12 @@
-const express = require('express');
-const AWS = require('aws-sdk');
-const bodyParser = require('body-parser');
-const cheerio = require('cheerio');
-const pdf = require('html-pdf');
+const express = require("express");
+const AWS = require("aws-sdk");
+const bodyParser = require("body-parser");
+const cheerio = require("cheerio");
+const pdf = require("html-pdf");
 const app = express();
 const port = process.env.PORT || 5000;
+
+require("dotenv").config();
 
 AWS.config.update({
   accessKeyId: process.env.ACCESS_KEY,
@@ -13,13 +15,16 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
-app.use(express.static('public'));
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.static("public"));
 
-app.use(function (req, res, next) {
+app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
   next();
 });
 
@@ -27,86 +32,114 @@ app.use(function (req, res, next) {
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
 // create a POST route for generation
-app.post('/generate', (req, res) => {
-  const { html, logoUrl, level } = req.body
+app.post("/generate", (req, res) => {
+  const { html, logoUrl, level, months } = req.body;
 
   //will select all table cells from HTML
-  const selector = 'table > tbody > .dataTR > td';
+  const selector = "table > tbody > .dataTR > td";
 
   //parses HTML and stores reference to the table with the tds within statsTable
   const page = cheerio.load(html);
   const statsTable = page(selector);
 
   //get company name from page, removing junk from element at the same time
-  const h1 = page('h1').text();
-  const companyName = h1.split('').splice(h1[0] === 'P' ? 22 : 28, h1.length).join('')
+  const h1 = page("h1").text();
+  const companyName = h1
+    .split("")
+    .splice(h1[0] === "P" ? 22 : 28, h1.length)
+    .join("");
 
   //we will use this function later to format the content of the cells we get from the HTML
   const formatData = cellText => {
-    let cellTextAsArray = cellText.split('');
+    let cellTextAsArray = cellText.split("");
     if (!isNaN(cellText[0])) {
       //VALUE CELL
       cellTextAsArray.forEach((char, i) => {
-        if (char === ' ') {
-          cellTextAsArray.splice(i, cellTextAsArray.length - i)
+        if (char === " ") {
+          cellTextAsArray.splice(i, cellTextAsArray.length - i);
         }
-      })
-      return cellTextAsArray.join('');
+      });
+      return cellTextAsArray.join("");
     } else {
       //MONTH CELL
       cellTextAsArray.forEach((char, i) => {
-        if (char === '/') {
-          cellTextAsArray.splice(i, 2)
+        if (char === "/") {
+          cellTextAsArray.splice(i, 2);
         }
-      })
-      return cellTextAsArray.join('');
+      });
+      return cellTextAsArray.join("");
     }
-  }
+  };
 
   //filter through the cells, pulling only month cells, view cells, and conversion cells
   const filteredData = [];
   let groupCounter = 0;
-  statsTable.each(function (i, e) {
+  statsTable.each(function(i, e) {
     if (groupCounter === 0 || groupCounter === 2 || groupCounter === 3) {
-      filteredData.push(formatData(page(e).text()))
+      filteredData.push(formatData(page(e).text()));
     }
     // add email conversions amount to previous conversions cell pushed to array
     if (groupCounter === 4) {
-      const emailConvs = Number(formatData(page(e).text()))
-      const websiteConvs = Number(filteredData.pop())
-      const totalConvs = emailConvs + websiteConvs
-      filteredData.push(totalConvs)
+      const emailConvs = Number(formatData(page(e).text()));
+      const websiteConvs = Number(filteredData.pop());
+      const totalConvs = emailConvs + websiteConvs;
+      filteredData.push(totalConvs);
     }
-    if (groupCounter < 6) { groupCounter++ } else { groupCounter = 0 }
+    if (groupCounter < 6) {
+      groupCounter++;
+    } else {
+      groupCounter = 0;
+    }
   });
 
   //trim data to last 12 months, so the last 36 elements of the array.
   const trimmedData = [];
-  for (let i = filteredData.length - 36; i < filteredData.length; i++) {
-    trimmedData.push(filteredData[i])
+  for (let i = filteredData.length - months * 3; i < filteredData.length; i++) {
+    trimmedData.push(filteredData[i]);
   }
 
   //function to return product name based on level, called in PDF HTML below
   const getProductName = level => {
     switch (level) {
       case 1:
-        return 'Showcase'
+        return "Showcase";
         break;
       case 2:
-        return 'Mini Showcase'
+        return "Mini Showcase";
         break;
       case 3:
-        return 'Featured Listing'
+        return "Featured Listing";
         break;
     }
-  }
+  };
 
   // really lazy maths
-  const totalViews = Number(trimmedData[34]) + Number(trimmedData[31]) + Number(trimmedData[28]) + Number(trimmedData[25]) + Number(trimmedData[22]) + Number(trimmedData[19]) + Number(trimmedData[16]) + Number(trimmedData[13]) + Number(trimmedData[10]) + Number(trimmedData[7]) + Number(trimmedData[4]) + Number(trimmedData[1])
-  const totalConversions = Number(trimmedData[35]) + Number(trimmedData[32]) + Number(trimmedData[29]) + Number(trimmedData[26]) + Number(trimmedData[23]) + Number(trimmedData[20]) + Number(trimmedData[17]) + Number(trimmedData[14]) + Number(trimmedData[11]) + Number(trimmedData[8]) + Number(trimmedData[5]) + Number(trimmedData[2])
-  const conversionRate = (totalConversions / totalViews * 100).toFixed(2) + "%"
+  // const totalViews = Number(trimmedData[34]) + Number(trimmedData[31]) + Number(trimmedData[28]) + Number(trimmedData[25]) + Number(trimmedData[22]) + Number(trimmedData[19]) + Number(trimmedData[16]) + Number(trimmedData[13]) + Number(trimmedData[10]) + Number(trimmedData[7]) + Number(trimmedData[4]) + Number(trimmedData[1])
+  // const totalConversions = Number(trimmedData[35]) + Number(trimmedData[32]) + Number(trimmedData[29]) + Number(trimmedData[26]) + Number(trimmedData[23]) + Number(trimmedData[20]) + Number(trimmedData[17]) + Number(trimmedData[14]) + Number(trimmedData[11]) + Number(trimmedData[8]) + Number(trimmedData[5]) + Number(trimmedData[2])
+  // const conversionRate = (totalConversions / totalViews * 100).toFixed(2) + "%"
 
-  const newHTML = `
+  let totalViews = 0;
+  let totalConversions = 0;
+  let gi = 0;
+
+  trimmedData.forEach(el => {
+    if (gi === 1) {
+      totalViews += Number(el);
+    }
+    if (gi === 2) {
+      totalConversions += Number(el);
+    }
+    if (gi < 2) {
+      gi++;
+    } else {
+      gi = 0;
+    }
+  });
+
+  const conversionRate =
+    ((totalConversions / totalViews) * 100).toFixed(2) + "%";
+
+  const htmlStart = `
     <html>
       <head>
         <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800&display=swap" rel="stylesheet">
@@ -229,7 +262,9 @@ app.post('/generate', (req, res) => {
           <div class='text'>
             <h4><span class='fat'>YACHTING</span>PAGES.COM <br /><span class='pink'>Traffic Report</span></h4>
             <h1>${companyName}</h1>
-            <h2>${getProductName(level)} <span>${trimmedData[0]} - ${trimmedData[33]}<span></h2>
+            <h2>${getProductName(level)} <span>${trimmedData[0]} - ${
+    trimmedData[trimmedData.length - 3]
+  }<span></h2>
             <h4></h4>
           </div>
           <div class='logo'>
@@ -243,139 +278,159 @@ app.post('/generate', (req, res) => {
             <th class='views'>Views</th>
             <th class='conversions'>Conversions</th>
           </tr>
-          <tr class='r1'>
-            <td class='month'>
-              ${trimmedData[0]}
-            </td>
-            <td class='views'>
-              ${trimmedData[1]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[2]}
-            </td>
-          </tr>
-          <tr class='r2'>
-            <td class='month'>
-              ${trimmedData[3]}
-            </td>
-            <td class='views'>
-              ${trimmedData[4]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[5]}
-            </td>
-          </tr>
-          <tr class='r3'>
-            <td class='month'>
-              ${trimmedData[6]}
-            </td>
-            <td class='views'>
-              ${trimmedData[7]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[8]}
-            </td>
-          </tr>
-          <tr class='r4'>
-            <td class='month'>
-              ${trimmedData[9]}
-            </td>
-            <td class='views'>
-              ${trimmedData[10]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[11]}
-            </td>
-          </tr>
-          <tr class='r5'>
-            <td class='month'>
-              ${trimmedData[12]}
-            </td>
-            <td class='views'>
-              ${trimmedData[13]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[14]}
-            </td>
-          </tr>
-          <tr class='r6'>
-            <td class='month'>
-              ${trimmedData[15]}
-            </td>
-            <td class='views'>
-              ${trimmedData[16]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[17]}
-            </td>
-          </tr>
-          <tr class='r7'>
-            <td class='month'>
-              ${trimmedData[18]}
-            </td>
-            <td class='views'>
-              ${trimmedData[19]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[20]}
-            </td>
-          </tr>
-          <tr class='r8'>
-            <td class='month'>
-              ${trimmedData[21]}
-            </td>
-            <td class='views'>
-              ${trimmedData[22]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[23]}
-            </td>
-          </tr>
-          <tr class='r9'>
-            <td class='month'>
-              ${trimmedData[24]}
-            </td>
-            <td class='views'>
-              ${trimmedData[25]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[26]}
-            </td>
-          </tr>
-          <tr class='r10'>
-            <td class='month'>
-              ${trimmedData[27]}
-            </td>
-            <td class='views'>
-              ${trimmedData[28]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[29]}
-            </td>
-          </tr>
-          <tr class='r11'>
-            <td class='month'>
-              ${trimmedData[30]}
-            </td>
-            <td class='views'>
-              ${trimmedData[31]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[32]}
-            </td>
-          </tr>
-          <tr class='r12'>
-            <td class='month'>
-              ${trimmedData[33]}
-            </td>
-            <td class='views'>
-              ${trimmedData[34]}
-            </td>
-            <td class='conversions'>
-              ${trimmedData[35]}
-            </td>
-          </tr>
-          <tr class='r13'>
+  `;
+
+  let dataRows = "";
+  for (let i = 0; i < trimmedData.length / 3; i++) {
+    dataRows += `
+      <tr class='row'>
+        <td class='month'>
+          ${trimmedData[i * 3]}
+        </td>
+        <td class='views'>
+          ${trimmedData[i * 3 + 1]}
+         </td>
+         <td class='conversions'>
+           ${trimmedData[i * 3 + 2]}
+         </td>
+      </tr>
+    `;
+  }
+
+  // <tr class='r1'>
+  //   <td class='month'>
+  //     ${trimmedData[0]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[1]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[2]}
+  //   </td>
+  // </tr>
+  // <tr class='r2'>
+  //   <td class='month'>
+  //     ${trimmedData[3]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[4]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[5]}
+  //   </td>
+  // </tr>
+  // <tr class='r3'>
+  //   <td class='month'>
+  //     ${trimmedData[6]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[7]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[8]}
+  //   </td>
+  // </tr>
+  // <tr class='r4'>
+  //   <td class='month'>
+  //     ${trimmedData[9]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[10]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[11]}
+  //   </td>
+  // </tr>
+  // <tr class='r5'>
+  //   <td class='month'>
+  //     ${trimmedData[12]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[13]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[14]}
+  //   </td>
+  // </tr>
+  // <tr class='r6'>
+  //   <td class='month'>
+  //     ${trimmedData[15]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[16]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[17]}
+  //   </td>
+  // </tr>
+  // <tr class='r7'>
+  //   <td class='month'>
+  //     ${trimmedData[18]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[19]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[20]}
+  //   </td>
+  // </tr>
+  // <tr class='r8'>
+  //   <td class='month'>
+  //     ${trimmedData[21]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[22]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[23]}
+  //   </td>
+  // </tr>
+  // <tr class='r9'>
+  //   <td class='month'>
+  //     ${trimmedData[24]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[25]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[26]}
+  //   </td>
+  // </tr>
+  // <tr class='r10'>
+  //   <td class='month'>
+  //     ${trimmedData[27]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[28]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[29]}
+  //   </td>
+  // </tr>
+  // <tr class='r11'>
+  //   <td class='month'>
+  //     ${trimmedData[30]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[31]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[32]}
+  //   </td>
+  // </tr>
+  // <tr class='r12'>
+  //   <td class='month'>
+  //     ${trimmedData[33]}
+  //   </td>
+  //   <td class='views'>
+  //     ${trimmedData[34]}
+  //   </td>
+  //   <td class='conversions'>
+  //     ${trimmedData[35]}
+  //   </td>
+  // </tr>
+
+  const htmlEnd = `<tr class='r13'>
             <td class='month total'>Total</td>
             <td class='views total'>${totalViews}</td>
             <td class='conversions total'>${totalConversions}</td>
@@ -393,31 +448,37 @@ app.post('/generate', (req, res) => {
         
       </body>
     </html>
-  `
+  `;
 
-  const filename = Date.now()
-  pdf.create(newHTML, { format: 'A4' }).toBuffer(function (err, buffer) {
+  const newHTML = htmlStart + dataRows + htmlEnd;
+
+  const filename = Date.now();
+  pdf.create(newHTML, { format: "A4" }).toBuffer(function(err, buffer) {
     if (err) {
       return console.log(err);
     }
     //upload to s3
 
-        const params = {
-          Bucket: 'yp-stats-generated-reports',
-          Key: filename + '.pdf',
-          Body: buffer
-        }
-        s3.putObject(params, (err, data) => {
-          if (err) {
-            console.log("There was an error while saving the PDF to S3");
-            console.log(err);
-            var error = new Error("There was an error while saving the PDF to S3");
-            callback(error);
-          } else {
-            console.log('PDF generated')
-            res.send({ link: 'https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/' + filename + '.pdf' });
-          }
-        })
-
+    const params = {
+      Bucket: "yp-stats-generated-reports",
+      Key: filename + ".pdf",
+      Body: buffer
+    };
+    s3.putObject(params, (err, data) => {
+      if (err) {
+        console.log("There was an error while saving the PDF to S3");
+        console.log(err);
+        var error = new Error("There was an error while saving the PDF to S3");
+        callback(error);
+      } else {
+        console.log("PDF generated");
+        res.send({
+          link:
+            "https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/" +
+            filename +
+            ".pdf"
+        });
+      }
+    });
   });
 });
