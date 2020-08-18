@@ -35,7 +35,7 @@ app.listen(port, () => console.log(`Listening on port ${port}`));
 app.post("/generate", (req, res) => {
   const { html, logoUrl, level, months } = req.body;
 
-  // bla bl
+  // bla bla bla
 
   //will select all table cells from HTML
   const selector = "table > tbody > .dataTR > td";
