@@ -10,7 +10,7 @@ require("dotenv").config();
 
 AWS.config.update({
   accessKeyId: process.env.ACCESS_KEY,
-  secretAccessKey: process.env.SECRET_ACCESS_KEY
+  secretAccessKey: process.env.SECRET_ACCESS_KEY,
 });
 
 const s3 = new AWS.S3();
@@ -19,7 +19,7 @@ app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.static("public"));
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
   res.header(
     "Access-Control-Allow-Headers",
@@ -50,7 +50,7 @@ app.post("/generate", (req, res) => {
     .join("");
 
   //we will use this function later to format the content of the cells we get from the HTML
-  const formatData = cellText => {
+  const formatData = (cellText) => {
     let cellTextAsArray = cellText.split("");
     if (!isNaN(cellText[0])) {
       //VALUE CELL
@@ -74,7 +74,7 @@ app.post("/generate", (req, res) => {
   //filter through the cells, pulling only month cells, view cells, and conversion cells
   const filteredData = [];
   let groupCounter = 0;
-  statsTable.each(function(i, e) {
+  statsTable.each(function (i, e) {
     if (groupCounter === 0 || groupCounter === 2 || groupCounter === 3) {
       filteredData.push(formatData(page(e).text()));
     }
@@ -99,7 +99,7 @@ app.post("/generate", (req, res) => {
   }
 
   //function to return product name based on level, called in PDF HTML below
-  const getProductName = level => {
+  const getProductName = (level) => {
     switch (level) {
       case 1:
         return "Showcase";
@@ -122,7 +122,7 @@ app.post("/generate", (req, res) => {
   let totalConversions = 0;
   let gi = 0;
 
-  trimmedData.forEach(el => {
+  trimmedData.forEach((el) => {
     if (gi === 1) {
       totalViews += Number(el);
     }
@@ -453,7 +453,7 @@ app.post("/generate", (req, res) => {
   const newHTML = htmlStart + dataRows + htmlEnd;
 
   const filename = Date.now();
-  pdf.create(newHTML, { format: "A4" }).toBuffer(function(err, buffer) {
+  pdf.create(newHTML, { format: "A4" }).toBuffer(function (err, buffer) {
     if (err) {
       return console.log(err);
     }
@@ -462,7 +462,7 @@ app.post("/generate", (req, res) => {
     const params = {
       Bucket: "yp-stats-generated-reports",
       Key: filename + ".pdf",
-      Body: buffer
+      Body: buffer,
     };
     s3.putObject(params, (err, data) => {
       if (err) {
@@ -476,7 +476,7 @@ app.post("/generate", (req, res) => {
           link:
             "https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/" +
             filename +
-            ".pdf"
+            ".pdf",
         });
       }
     });
