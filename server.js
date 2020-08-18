@@ -31,6 +31,10 @@ app.use(function (req, res, next) {
 // console.log that your server is up and running
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
+app.get("/test", (req, res) => {
+  res.send("Test working!");
+});
+
 // create a POST route for generation
 app.post("/generate", (req, res) => {
   const { html, logoUrl, level, months } = req.body;
