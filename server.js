@@ -5,7 +5,6 @@ const cheerio = require("cheerio");
 const pdf = require("html-pdf");
 const app = express();
 const port = process.env.PORT || 5000;
-const cors = require("cors")
 
 require("dotenv").config();
 
@@ -17,9 +16,8 @@ AWS.config.update({
 const s3 = new AWS.S3();
 
 app.use(bodyParser.json({ limit: "10mb" }));
-app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
+app.use(bodyParser.urlencoded({ extended: true}));
 app.use(express.static("public"));
-app.use(cors())
 
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
@@ -36,6 +34,7 @@ app.listen(port, () => console.log(`Listening on port ${port}`));
 // create a POST route for generation
 app.post("/generate", (req, res) => {
   const { html, logoUrl, level, months } = req.body;
+  console.log(req.body)
 
   // bla bla bla
 
@@ -46,12 +45,16 @@ app.post("/generate", (req, res) => {
   const page = cheerio.load(html);
   const statsTable = page(selector);
 
+  const numberOfColumns = 13;
+
+  console.log(statsTable)
+
   //get company name from page, removing junk from element at the same time
-  const h1 = page("h1").text();
+  const h1 = page("h1 i").text();
   const companyName = h1
-    .split("")
-    .splice(h1[0] === "P" ? 22 : 28, h1.length)
-    .join("");
+    // .split("")
+    // .splice(h1[0] === "P" ? 22 : 28, h1.length)
+    // .join("");
 
   //we will use this function later to format the content of the cells we get from the HTML
   const formatData = (cellText) => {
@@ -89,7 +92,7 @@ app.post("/generate", (req, res) => {
       const totalConvs = emailConvs + websiteConvs;
       filteredData.push(totalConvs);
     }
-    if (groupCounter < 6) {
+    if (groupCounter < numberOfColumns) {
       groupCounter++;
     } else {
       groupCounter = 0;
@@ -456,7 +459,8 @@ app.post("/generate", (req, res) => {
 
   const newHTML = htmlStart + dataRows + htmlEnd;
 
-  const filename = Date.now();
+  // const filename = Date.now();
+  const filename = companyName.split(' ').join('_') + '_' + Date.now()
   pdf.create(newHTML, { format: "A4" }).toBuffer(function (err, buffer) {
     if (err) {
       return console.log(err);
@@ -481,6 +485,7 @@ app.post("/generate", (req, res) => {
             "https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/" +
             filename +
             ".pdf",
+          companyName: companyName
         });
       }
     });
