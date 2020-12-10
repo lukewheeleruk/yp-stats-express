@@ -10,7 +10,7 @@ require("dotenv").config();
 
 AWS.config.update({
   accessKeyId: process.env.AMAZON_ACCESS_KEY,
-  secretAccessKey: process.env.AMAZON_SECRET_KEY,
+  secretAccessKey: process.env.AMAZON_SECRET_KEY
 });
 
 const s3 = new AWS.S3();
@@ -269,13 +269,13 @@ app.post("/generate", (req, res) => {
           <div class='text'>
             <h4><span class='fat'>YACHTING</span>PAGES.COM <br /><span class='pink'>Traffic Report</span></h4>
             <h1>${companyName}</h1>
-            <h2>${getProductName(level)} <span>${trimmedData[0]} - ${
+            <h2>${getProductName(level)} <span>${
     trimmedData[trimmedData.length - 3]
-  }<span></h2>
+  } - ${trimmedData[0]}<span></h2>
             <h4></h4>
           </div>
           <div class='logo'>
-            <img src=${logoUrl}/>
+            <img src="${logoUrl}"/>
           </div>
         </div>
         <div class='clear'></div>
@@ -287,21 +287,21 @@ app.post("/generate", (req, res) => {
           </tr>
   `;
 
-  let dataRows = "";
+  let dataRows = []
   for (let i = 0; i < trimmedData.length / 3; i++) {
-    dataRows += `
-      <tr class='row'>
-        <td class='month'>
-          ${trimmedData[i * 3]}
-        </td>
-        <td class='views'>
-          ${trimmedData[i * 3 + 1]}
-         </td>
-         <td class='conversions'>
-           ${trimmedData[i * 3 + 2]}
-         </td>
-      </tr>
-    `;
+    dataRows.unshift(`
+    <tr class='row'>
+      <td class='month'>
+        ${trimmedData[i * 3]}
+      </td>
+      <td class='views'>
+        ${trimmedData[i * 3 + 1]}
+       </td>
+       <td class='conversions'>
+         ${trimmedData[i * 3 + 2]}
+       </td>
+    </tr>
+  `)
   }
 
   // <tr class='r1'>
@@ -457,7 +457,7 @@ app.post("/generate", (req, res) => {
     </html>
   `;
 
-  const newHTML = htmlStart + dataRows + htmlEnd;
+  const newHTML = htmlStart + dataRows.toString().split(',').join("") + htmlEnd;
 
   // const filename = Date.now();
   const filename = companyName.split(' ').join('_') + '_' + Date.now()
