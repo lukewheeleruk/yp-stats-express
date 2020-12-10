@@ -9,8 +9,8 @@ const port = process.env.PORT || 5000;
 require("dotenv").config();
 
 AWS.config.update({
-  accessKeyId: process.env.AMAZON_ACCESS_KEY,
-  secretAccessKey: process.env.AMAZON_SECRET_KEY
+  accessKeyId: process.env.AMAZON_ACCESS_KEY || "AKIAIHQUYPXTAMH2EH3A",
+  secretAccessKey: process.env.AMAZON_SECRET_KEY || "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"
 });
 
 const s3 = new AWS.S3();
@@ -98,6 +98,9 @@ app.post("/generate", (req, res) => {
       groupCounter = 0;
     }
   });
+
+  console.log('Filtered data:')
+  console.log(filteredData)
 
   //trim data to last 12 months, so the last 36 elements of the array.
   const trimmedData = [];
@@ -287,9 +290,12 @@ app.post("/generate", (req, res) => {
           </tr>
   `;
 
+  console.log("Trimmed data:")
+  console.log(trimmedData)
+
   let dataRows = []
   for (let i = 0; i < trimmedData.length / 3; i++) {
-    dataRows.unshift(`
+    const row = (`
     <tr class='row'>
       <td class='month'>
         ${trimmedData[i * 3]}
@@ -302,6 +308,11 @@ app.post("/generate", (req, res) => {
        </td>
     </tr>
   `)
+    if (i < 1) {
+      dataRows.push(row)
+    } else {
+      dataRows.unshift(row)
+    }
   }
 
   // <tr class='r1'>
