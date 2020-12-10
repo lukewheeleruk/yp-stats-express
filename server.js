@@ -5,12 +5,13 @@ const cheerio = require("cheerio");
 const pdf = require("html-pdf");
 const app = express();
 const port = process.env.PORT || 5000;
+const cors = require("cors")
 
 require("dotenv").config();
 
 AWS.config.update({
-  accessKeyId: process.env.ACCESS_KEY,
-  secretAccessKey: process.env.SECRET_ACCESS_KEY,
+  accessKeyId: process.env.AMAZON_ACCESS_KEY,
+  secretAccessKey: process.env.AMAZON_SECRET_KEY,
 });
 
 const s3 = new AWS.S3();
@@ -18,6 +19,7 @@ const s3 = new AWS.S3();
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.static("public"));
+app.use(cors())
 
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
