@@ -9,8 +9,8 @@ const port = process.env.PORT || 5000;
 require("dotenv").config();
 
 AWS.config.update({
-  accessKeyId: process.env.AMAZON_ACCESS_KEY || "AKIAIHQUYPXTAMH2EH3A",
-  secretAccessKey: process.env.AMAZON_SECRET_KEY || "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"
+  accessKeyId: process.env.AMAZON_ACCESS_KEY,
+  secretAccessKey: process.env.AMAZON_SECRET_KEY
 });
 
 const s3 = new AWS.S3();
