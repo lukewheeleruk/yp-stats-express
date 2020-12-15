@@ -377,6 +377,7 @@ app.post("/generate", (req, res) => {
     }
   }
 
+  oldTrimmedData.reverse();
   for (let i = 0; i < oldTrimmedData.length / 3; i++) {
     const row = `
     <tr class='row'>
