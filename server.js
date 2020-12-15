@@ -382,13 +382,13 @@ app.post("/generate", (req, res) => {
     const row = `
     <tr class='row'>
       <td class='month'>
-        ${oldTrimmedData[i * 3]}
+        ${oldTrimmedData[i * 3 + 2]}
       </td>
       <td class='views'>
         ${oldTrimmedData[i * 3 + 1]}
        </td>
        <td class='conversions'>
-         ${oldTrimmedData[i * 3 + 2]}
+         ${oldTrimmedData[i * 3]}
        </td>
     </tr>
   `;
