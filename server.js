@@ -10,13 +10,13 @@ require("dotenv").config();
 
 AWS.config.update({
   accessKeyId: process.env.AMAZON_ACCESS_KEY,
-  secretAccessKey: process.env.AMAZON_SECRET_KEY
+  secretAccessKey: process.env.AMAZON_SECRET_KEY,
 });
 
 const s3 = new AWS.S3();
 
 app.use(bodyParser.json({ limit: "10mb" }));
-app.use(bodyParser.urlencoded({ extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 app.use(function (req, res, next) {
@@ -33,28 +33,27 @@ app.listen(port, () => console.log(`Listening on port ${port}`));
 
 // create a POST route for generation
 app.post("/generate", (req, res) => {
-  const { html, logoUrl, level, months } = req.body;
-  console.log(req.body)
+  // OLD
+  // const { html, logoUrl, level, months } = req.body;
+  const { newHtml, oldHtml, logoUrl, level, oldMonths, newMonths } = req.body;
 
-  // bla bla bla
-
-  //will select all table cells from HTML
   const selector = "table > tbody > .dataTR > td";
 
-  //parses HTML and stores reference to the table with the tds within statsTable
-  const page = cheerio.load(html);
-  const statsTable = page(selector);
+  // OLD
+  // const page = cheerio.load(html)
+  const newPage = cheerio.load(newHtml);
+  const oldPage = cheerio.load(oldHtml);
+  const newStatsTable = newPage(selector);
+  const oldStatsTable = oldPage(selector);
 
-  const numberOfColumns = 13;
+  const newNumberOfColumns = 13;
+  const oldNumberOfColumns = 6;
 
-  console.log(statsTable)
-
-  //get company name from page, removing junk from element at the same time
-  const h1 = page("h1 i").text();
-  const companyName = h1
-    // .split("")
-    // .splice(h1[0] === "P" ? 22 : 28, h1.length)
-    // .join("");
+  const h1 = newPage("h1 i").text();
+  const companyName = h1;
+  // .split("")
+  // .splice(h1[0] === "P" ? 22 : 28, h1.length)
+  // .join("");
 
   //we will use this function later to format the content of the cells we get from the HTML
   const formatData = (cellText) => {
@@ -79,33 +78,77 @@ app.post("/generate", (req, res) => {
   };
 
   //filter through the cells, pulling only month cells, view cells, and conversion cells
-  const filteredData = [];
-  let groupCounter = 0;
-  statsTable.each(function (i, e) {
-    if (groupCounter === 0 || groupCounter === 2 || groupCounter === 3) {
-      filteredData.push(formatData(page(e).text()));
+
+  const newFilteredData = [];
+  let newGroupCounter = 0;
+  newStatsTable.each(function (i, e) {
+    if (
+      newGroupCounter === 0 ||
+      newGroupCounter === 2 ||
+      newGroupCounter === 3
+    ) {
+      newFilteredData.push(formatData(newPage(e).text()));
     }
     // add email conversions amount to previous conversions cell pushed to array
-    if (groupCounter === 4) {
-      const emailConvs = Number(formatData(page(e).text()));
-      const websiteConvs = Number(filteredData.pop());
+    if (newGroupCounter === 4) {
+      const emailConvs = Number(formatData(newPage(e).text()));
+      const websiteConvs = Number(newFilteredData.pop());
       const totalConvs = emailConvs + websiteConvs;
-      filteredData.push(totalConvs);
+      newFilteredData.push(totalConvs);
     }
-    if (groupCounter < numberOfColumns) {
-      groupCounter++;
+    if (newGroupCounter < newNumberOfColumns) {
+      newGroupCounter++;
     } else {
-      groupCounter = 0;
+      newGroupCounter = 0;
     }
   });
 
-  console.log('Filtered data:')
-  console.log(filteredData)
+  const oldFilteredData = [];
+  let oldGroupCounter = 0;
+  oldStatsTable.each(function (i, e) {
+    if (
+      oldGroupCounter === 0 ||
+      oldGroupCounter === 2 ||
+      oldGroupCounter === 3
+    ) {
+      oldFilteredData.push(formatData(oldPage(e).text()));
+    }
+    // add email conversions amount to previous conversions cell pushed to array
+    if (oldGroupCounter === 4) {
+      const emailConvs = Number(formatData(oldPage(e).text()));
+      const websiteConvs = Number(oldFilteredData.pop());
+      const totalConvs = emailConvs + websiteConvs;
+      oldFilteredData.push(totalConvs);
+    }
+    if (oldGroupCounter < oldNumberOfColumns) {
+      oldGroupCounter++;
+    } else {
+      oldGroupCounter = 0;
+    }
+  });
+
+  console.log("New filtered data:");
+  console.log(newFilteredData);
+  console.log("Old filtered data:");
+  console.log(oldFilteredData);
 
   //trim data to last 12 months, so the last 36 elements of the array.
-  const trimmedData = [];
-  for (let i = filteredData.length - months * 3; i < filteredData.length; i++) {
-    trimmedData.push(filteredData[i]);
+  const oldTrimmedData = [];
+  for (
+    let i = oldFilteredData.length - oldMonths * 3;
+    i < oldFilteredData.length;
+    i++
+  ) {
+    oldTrimmedData.push(oldFilteredData[i]);
+  }
+
+  const newTrimmedData = [];
+  for (
+    let i = newFilteredData.length - newMonths * 3;
+    i < newFilteredData.length;
+    i++
+  ) {
+    newTrimmedData.push(newFilteredData[i]);
   }
 
   //function to return product name based on level, called in PDF HTML below
@@ -132,7 +175,7 @@ app.post("/generate", (req, res) => {
   let totalConversions = 0;
   let gi = 0;
 
-  trimmedData.forEach((el) => {
+  oldTrimmedData.forEach((el) => {
     if (gi === 1) {
       totalViews += Number(el);
     }
@@ -143,6 +186,22 @@ app.post("/generate", (req, res) => {
       gi++;
     } else {
       gi = 0;
+    }
+  });
+
+  let ngi = 0;
+
+  newTrimmedData.forEach((el) => {
+    if (ngi === 1) {
+      totalViews += Number(el);
+    }
+    if (ngi === 2) {
+      totalConversions += Number(el);
+    }
+    if (ngi < 2) {
+      ngi++;
+    } else {
+      ngi = 0;
     }
   });
 
@@ -272,9 +331,9 @@ app.post("/generate", (req, res) => {
           <div class='text'>
             <h4><span class='fat'>YACHTING</span>PAGES.COM <br /><span class='pink'>Traffic Report</span></h4>
             <h1>${companyName}</h1>
-            <h2>${getProductName(level)} <span>${
-    trimmedData[trimmedData.length - 3]
-  } - ${trimmedData[0]}<span></h2>
+            <h2>${getProductName(level)} <span>${oldTrimmedData[0]} - ${
+    newTrimmedData[0]
+  }<span></h2>
             <h4></h4>
           </div>
           <div class='logo'>
@@ -290,29 +349,49 @@ app.post("/generate", (req, res) => {
           </tr>
   `;
 
-  console.log("Trimmed data:")
-  console.log(trimmedData)
+  console.log("Old trimmed data:");
+  console.log(oldTrimmedData);
+  console.log("New trimmed data:");
+  console.log(newTrimmedData);
 
-  let dataRows = []
-  for (let i = 0; i < trimmedData.length / 3; i++) {
-    const row = (`
+  let dataRows = [];
+
+  for (let i = 0; i < newTrimmedData.length / 3; i++) {
+    const row = `
     <tr class='row'>
       <td class='month'>
-        ${trimmedData[i * 3]}
+        ${newTrimmedData[i * 3]}
       </td>
       <td class='views'>
-        ${trimmedData[i * 3 + 1]}
+        ${newTrimmedData[i * 3 + 1]}
        </td>
        <td class='conversions'>
-         ${trimmedData[i * 3 + 2]}
+         ${newTrimmedData[i * 3 + 2]}
        </td>
     </tr>
-  `)
+  `;
     if (i < 1) {
-      dataRows.push(row)
+      dataRows.push(row);
     } else {
-      dataRows.unshift(row)
+      dataRows.unshift(row);
     }
+  }
+
+  for (let i = 0; i < oldTrimmedData.length / 3; i++) {
+    const row = `
+    <tr class='row'>
+      <td class='month'>
+        ${oldTrimmedData[i * 3]}
+      </td>
+      <td class='views'>
+        ${oldTrimmedData[i * 3 + 1]}
+       </td>
+       <td class='conversions'>
+         ${oldTrimmedData[i * 3 + 2]}
+       </td>
+    </tr>
+  `;
+    dataRows.unshift(row);
   }
 
   // <tr class='r1'>
@@ -468,10 +547,10 @@ app.post("/generate", (req, res) => {
     </html>
   `;
 
-  const newHTML = htmlStart + dataRows.toString().split(',').join("") + htmlEnd;
+  const newHTML = htmlStart + dataRows.toString().split(",").join("") + htmlEnd;
 
   // const filename = Date.now();
-  const filename = companyName.split(' ').join('_') + '_' + Date.now()
+  const filename = companyName.split(" ").join("_") + "_" + Date.now();
   pdf.create(newHTML, { format: "A4" }).toBuffer(function (err, buffer) {
     if (err) {
       return console.log(err);
@@ -496,7 +575,7 @@ app.post("/generate", (req, res) => {
             "https://yp-stats-generated-reports.s3-eu-west-1.amazonaws.com/" +
             filename +
             ".pdf",
-          companyName: companyName
+          companyName: companyName,
         });
       }
     });
